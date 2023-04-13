@@ -35,6 +35,76 @@ enum Buttons {
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;   
 /*****************************/
+/****************************/
+//withdraw balance
+void withdraw_money(const string& filename, const uint64_t& numToSearch, uint16_t money_left)
+{
+    ifstream file(filename); // Open input file in read mode
+    vector<string> lines; // Store lines in memory
+
+    if (file.is_open()) // Check if file is opened successfully
+    {
+        string line;
+        while (getline(file, line)) // Read lines from the file
+        {
+            istringstream iss(line);
+            string numString;
+            string balanceString;
+            getline(iss, numString, ',');
+
+            uint64_t num = stoll(numString); // Convert the first number to uint64_t
+            if (num == numToSearch) // Compare with the number to search
+            {
+                vector<string> fields; // Store fields in a vector
+
+                // Split line into fields using commas as delimiter
+                size_t pos = 0;
+                string field;
+                while ((pos = line.find(',')) != string::npos) {
+                    field = line.substr(0, pos);
+                    fields.push_back(field);
+                    line.erase(0, pos + 1);
+                }
+                fields.push_back(line); // Last field after the last comma
+
+                if (fields.size() >= 3) { // Modify the third field (data3)
+                    fields[2] = to_string(money_left); // Replace with new value
+                }
+
+                // Join the fields back into a line
+                line = fields[0];
+                for (size_t i = 1; i < fields.size(); ++i) {
+                    line += ',' + fields[i];
+                }
+            }
+            lines.push_back(line); // Store the line in memory
+        }
+        file.close(); // Close the file
+
+        // Write entire contents of the file back to disk
+        ofstream outfile(filename, ios::out | ios::trunc);
+        if (outfile.is_open()) {
+            for (const auto& l : lines) {
+                outfile << l << endl;
+            }
+            outfile.close(); // Close the output file
+        } else {
+            cout << "Failed to open file for writing." << endl;
+        }
+    } else {
+        cout << "Failed to open file for reading." << endl;
+    }
+}
+
+
+/*****************************/
+/****************************/
+
+
+
+
+
+
 bool is_pass_correct(const string& filename,const uint16_t& card_password ,const uint64_t& numToSearch)
 {
     ifstream file(filename); // Open the file for reading

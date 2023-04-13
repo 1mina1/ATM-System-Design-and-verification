@@ -30,3 +30,13 @@ void updateAccounts(account_t ** Accounts_DB,uint8_t DB_SIZE)
 	}
 	fclose(filepointer);
 }
+
+uint8_t findAccount(account_t **Accounts_DB,uint8_t DB_SIZE,account_t *rat){
+	uint8_t *PAN = rat->PIN;
+	for(uint8_t i=0;i<DB_SIZE;i++)
+	{
+		if(!strcmp(Accounts_DB[i]->primaryAccountNumber,PAN))
+			return i;
+	}
+	return -1;
+}
