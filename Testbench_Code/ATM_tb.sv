@@ -1,16 +1,3 @@
-// FILE NAME: ATM_tb.v
-// TYPE: module
-// DEPARTMENT: communication and electronics department
-// AUTHOR: Mina Hanna
-// AUTHOR EMAIL: mina.hannaone@gmail.com
-//------------------------------------------------
-// Release history
-// VERSION DATE AUTHOR DESCRIPTION
-// 1.0 24/2/2022 Mina Hanna final version
-//------------------------------------------------
-// KEYWORDS: ATM, constraint randomization, sequence, dirver, monitor
-//------------------------------------------------
-// PURPOSE: this is a testbench for an ATM
 `timescale 1ns/1ps
 import uvm_pkg::*;
 `include "uvm_macros.svh"
