@@ -1,12 +1,3 @@
-/***************************************************************************************************************/
-/*
- Author: Omar Ayman Abdel-Motaal
-
- Design Name:  Card Scan 
- Module Name:  u_card_scan.v 
- Project Name: ATM
- Describtion:  This Module aim to emulate server data base
-/****************************************************************************************************************/
 module u_card_scan
     #(parameter CNS = 64, CIS = 4,DBD=16 ,Pass_width=16,balance_width=14)//CNS: Credit number size  ,CIS: card_index , DBD:Data base depth
 	(
