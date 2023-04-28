@@ -1,0 +1,1693 @@
+Coverage Report by file with details
+
+=================================================================================
+=== File: C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                          140       140         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv --
+
+    1                                                /***************************************************************************************************************/
+    2                                                /*
+    3                                                 Author: Omar Ayman Abdel-Motaal
+    4                                                
+    5                                                 Design Name:  ATM.FSM
+    6                                                 Module Name:  u_atm_fsm.v 
+    7                                                 Project Name: ATM
+    8                                                 Describtion:  This Module aim to implement FSM of ATM
+    9                                                /****************************************************************************************************************/
+    10                                               module u_atm_fsm
+    11                                                   #(parameter CNS = 64, CIS = 4,DBD=16 ,Pass_width=16,balance_width=14 )
+    12                                               	(
+    13                                                   input wire	                        clk,
+    14                                               	input wire                          rst,
+    15                                               	input wire                          ic,//insert card
+    16                                               	input wire                          mt,//more transaction
+    17                                                   input wire     [CNS-1:0]            credit_number, destination_number, 
+    18                                               	input wire     [Pass_width-1:0]     en_password, new_password,
+    19                                               	input wire     [15:0]               en_ammount_money,
+    20                                                   input wire     [2:0]                option,
+    21                                               	input wire     [3:0]                keyboard,
+    22                                               	input 								enter,
+    23                                               
+    24                                               
+    25                                               	output reg                          card_accepted,
+    26                                               	output reg    [balance_width-1:0]                account_balance,
+    27                                               	output reg 						    Insuffucient_flag,
+    28                                               	output reg                          y0,y1,y2,y3,y4,y5,y6,y7,y11,y10,y8,y12
+    29                                               	);
+    30                                               
+    31                                               
+    32                                               	
+    33                                               
+    34                                               reg [balance_width-1:0]  source_server_balance_reg ;
+    35                                               reg [Pass_width-1:0]     source_server_pass_reg ;
+    36                                               reg [balance_width-1:0]  destination_server_balance_reg ;
+    37                                               reg [Pass_width-1:0]     destination_server_pass_reg ;
+    38                                               
+    39                                               
+    40                                               
+    41                                               
+    42                                               
+    43                                               wire                          source_exists;
+    44                                               wire                          destination_exists;
+    45                                               wire     [balance_width-1:0]  source_server_balance;
+    46                                               wire     [balance_width-1:0]  destination_server_balance;
+    47                                               wire     [Pass_width-1:0]     source_server_pass;
+    48                                               wire     [Pass_width-1:0]     destination_server_pass;
+    49                                               wire     [CIS-1:0]            SINDEX;
+    50                                               wire     [CIS-1:0]            DINDEX;
+    51                                               u_card_scan check_source_account_exist(.credit_number(credit_number),.card_pass(source_server_pass),.card_index(SINDEX), .card_balance(source_server_balance),.card_found_flag(source_exists) );
+    52                                               u_card_scan check_destination_account_exist(.credit_number(destination_number),.card_pass(destination_server_pass),.card_index(DINDEX) ,.card_balance(destination_server_balance),.card_found_flag(destination_exists) );
+    53                                                
+    54                                                /***************************** Intial Blocks ****************************/
+    55                                                reg [2:0] wrong_tries;
+    56                                                initial begin
+    57              1                          1      wrong_tries =0;
+    58                                                end
+    59                                                
+    60                                                /********************************* assign ******************************/
+    61                                                wire [2:0]   trials;
+    62                                                wire [12:0]  deposit_max_val;
+    63                                                assign trials='d5;
+    64                                                assign deposit_max_val='d5000;
+    65                                               /********************************* States *******************************/	
+    66                                               localparam [3:0]      idle=4'b0000,             //s0
+    67                                                                     balance_check=4'b0001,     //s1
+    68                                               					  withdraw=4'b0010,         //s2
+    69                                               					  deposit=4'b0011,          //s3
+    70                                               					  transfer=4'b0100, 		//s4
+    71                                               					  exit=4'b0101,             //s5
+    72                                               					  new_pass=4'b0110,         //s6
+    73                                               					  lang_used=4'b0111,        //s7
+    74                                               					  scan_card=4'b1000,         //s8
+    75                                               					  enter_pass=4'b1001,       //s9
+    76                                               					  option_select=4'b1010,    //s10 
+    77                                               					  anything_else=4'b1011;    //s11
+    78                                                                    
+    79                                               					  
+    80                                               /*****************************************************************************/	
+    81                                               reg [3:0] current_state, next_state;
+    82                                               
+    83                                               /**************************** States Transition *****************************/	
+    84              1                      80843     always @(posedge clk or negedge rst)
+    85                                               begin
+    86                                               	if(!rst)
+    87                                               	begin
+    88              1                          2     		current_state<= idle;
+    89                                               		
+    90                                               		end
+    91                                               	else
+    92              1                      80841     		current_state<=next_state;
+    93                                               end				  
+    94                                               
+    95                                               /*****************************************************************************/
+    96                                               /*******************************  Timer **************************************/
+    97                                               reg [5:0] counter;
+    98              1                     148805     always @(posedge clk or negedge rst)
+    99                                               begin
+    100                                              	if(!rst)
+    101                                              	begin
+    102             1                          2     		counter<= 0;	
+    103                                              	end
+    104                                              	else
+    105                                              	if(current_state==next_state)
+    106             1                      92210     	counter<=counter+1'd1;
+    107                                              	else
+    108             1                      56593     		counter<=0;
+    109                                              end	     
+    110                                              
+    111                                                  
+    112                                              /*****************************************************************************/
+    113             1                     225627     always @(*)
+    114                                              begin
+    115                                              case(current_state)
+    116                                              		idle:begin
+    117             1                      39318     					$display("Insert Card!\n");	
+    118                                              					if(ic)//insert  card
+    119                                              							begin
+    120             1                      17675     								next_state =  scan_card;	
+    121                                              								end									
+    122                                              
+    123                                              					else
+    124                                              						begin
+    125             1                      21643     						next_state =  idle;							
+    126                                              						end
+    127                                              			 end
+    128                                              
+    129                                              	scan_card:begin
+    130             1                      19791     	$display("Scan  Card !\n");
+    131                                              				if(source_exists==1)//card scan
+    132                                              					begin	
+    133             1                      17411     						$display("Card 	 exist!\n");											
+    134             1                      17411     						source_server_balance_reg = source_server_balance;
+    135             1                      17411     						source_server_pass_reg = source_server_pass;							 
+    136             1                      17411     						card_accepted =1;	
+    137             1                      17411     						wrong_tries='d0;											
+    138             1                      17411     						next_state = lang_used;
+    139                                              					end
+    140                                              				else
+    141                                              					begin																					
+    142             1                       2380     						$display("Card 	Not exist!\n");											
+    143             1                       2380     						source_server_balance_reg = 0;
+    144             1                       2380     						source_server_pass_reg = 0;							 
+    145             1                       2380     						card_accepted =0;
+    146             1                       2380     						wrong_tries='d0;
+    147             1                       2380     						next_state =  scan_card;																											
+    148                                              					end							
+    149                                              				end	
+    150                                              					  				  
+    151                                              	lang_used:   begin
+    152             1                      35825     					   $display("Language used!\n");		          
+    153                                              					  if(counter <5 )begin
+    154                                              							   if(keyboard != 0)				  
+    155             1                       7186     								next_state = enter_pass;
+    156                                              								else
+    157             1                      25090     								 next_state = lang_used;
+    158                                              					  end else
+    159             1                       3549     						next_state = idle;
+    160                                              							
+    161                                              				 end			
+    162                                              				 
+    163                                              		enter_pass: begin
+    164             1                      27048     		$display("Enter Card Password!\n " );
+    165                                              		    if(counter <5 )begin
+    166                                              				if(enter) begin
+    167                                              							if(en_password == source_server_pass_reg)
+    168                                              								begin
+    169             1                       5200     									next_state = option_select;
+    170             1                       5200     									wrong_tries='d0;
+    171             1                       5200     								   $display("Correct password!\n");
+    172                                              								end
+    173                                              							else
+    174                                              								begin
+    175                                              									if ((wrong_tries != trials) )
+    176                                              										begin
+    177             1                       4332     										 $display("Not Correct Password!\n");
+    178             1                       4332     											wrong_tries=wrong_tries+1'd1;
+    179             1                       4332     											next_state = enter_pass;
+    180                                              										end
+    181                                              									else 
+    182                                              									  begin
+    183             1                        231     										wrong_tries='d0;
+    184             1                        231     										$display("Invalid!...\n");									
+    185             1                        231     										next_state = idle;
+    186                                              									  end
+    187                                              								end	
+    188                                              							end
+    189                                              			else	begin
+    190             1                      14957     				next_state=enter_pass;
+    191                                              					end
+    192                                              						end 
+    193                                              							  else begin
+    194             1                       2328     								next_state = idle;end				
+    195                                              					  end
+    196                                              					  
+    197                                              		option_select:begin
+    198             1                      27110     					 $display("Menu!\n");
+    199                                              					if(option==0)
+    200                                              					begin
+    201                                              						if(counter<5) begin
+    202             1                      14762     						$display("Enter Option !\n");
+    203             1                      14762     						next_state = option_select;
+    204                                              						end else 
+    205             1                       1200     						next_state = idle;
+    206                                              						
+    207                                              					end else
+    208                                              					begin
+    209                                              								  
+    210                                              							if(option == 'b10)
+    211                                              								begin
+    212             1                       1246     								next_state = withdraw;
+    213                                              								end
+    214                                              							else if(option == 'b01)
+    215                                              								begin
+    216             1                       2145     								next_state = balance_check;
+    217                                              								end
+    218                                              							else if(option == 'b11)
+    219                                              								begin
+    220             1                       1347     								next_state = deposit;
+    221                                              								end
+    222                                              							else if(option == 'b100)
+    223                                              								begin
+    224             1                       1292     								next_state = transfer;
+    225                                              								end
+    226                                              							else if(option == 'b110)
+    227                                              								begin
+    228             1                       1328     								next_state = new_pass;
+    229                                              								end	
+    230                                              							else if(option == 'b101)
+    231                                              								begin
+    232             1                       1360     								next_state = exit;
+    233                                              
+    234                                              								end
+    235                                              							else //comment : if option selected wrong remain at Menu panel.
+    236                                              								begin
+    237             1                       2430     								next_state = option_select;
+    238                                              								
+    239                                              								end
+    240                                              					end
+    241                                              
+    242                                              			  end
+    243                                              		withdraw: begin
+    244                                              				    /*******************************/
+    245             1                       8626     						$display("Withdraw  Operation!\n");
+    246             1                       8626     				        Insuffucient_flag=0;
+    247                                              				    /*******************************/
+    248                                              		    if(counter <10 )begin
+    249                                              						if(enter) begin
+    250                                              								if((en_ammount_money <= source_server_balance_reg)&&(en_ammount_money!=0)) //check ammount entered is less that blance in account
+    251                                              									begin
+    252             1                        530     										$display("Withdraw  Operation succ!\n");
+    253             1                        530     										 source_server_balance_reg=source_server_balance_reg-en_ammount_money;
+    254             1                        530     										 $display("New Balance: %d\n", source_server_balance_reg);
+    255             1                        530     										 account_balance=source_server_balance_reg;
+    256             1                        530     										next_state = anything_else;
+    257                                              										end
+    258                                              								else
+    259                                              									begin
+    260                                              										if(en_ammount_money==0) 
+    261                                              										begin
+    262             1                         34     											$display("Enter Money Valu!\n");
+    263             1                         34     											  next_state = withdraw;
+    264                                              										end
+    265                                              										else 
+    266                                              											begin													
+    267             1                        586     											$display("Insuffucient balance!\n");
+    268             1                        586     											next_state = option_select;
+    269                                              											/*******************************/
+    270             1                        586     												 Insuffucient_flag=1;
+    271                                              											/*******************************/
+    272                                              											end
+    273                                              									end
+    274                                              									end
+    275                                              							else begin
+    276             1                       7222     							next_state=withdraw;
+    277                                              								end
+    278                                              						end
+    279                                              			 else begin
+    280             1                        254     					    next_state = idle;
+    281                                              					end		
+    282                                              		
+    283                                              					 end
+    284                                              		balance_check:begin
+    285             1                       9738     						$display("Blance check  Operation!\n");
+    286             1                       9738     						account_balance=source_server_balance_reg; 
+    287                                              						 if(counter<5)
+    288                                              							begin
+    289             1                       8115     							next_state =balance_check ;
+    290             1                       8115     							 $display("Balance: %d\n", source_server_balance_reg);
+    291                                              							end 
+    292                                              						  else 
+    293                                              							begin
+    294             1                       1623     								 next_state = anything_else;
+    295                                              							 end		
+    296                                              					 end
+    297                                              
+    298                                              		deposit: begin
+    299             1                       9425     		 $display("Deposit Operation!\n");
+    300                                              		         if(counter <10 )begin		
+    301                                              						if(enter) begin				 
+    302                                              								if((en_ammount_money <= deposit_max_val)&& (en_ammount_money!=0)) 
+    303                                              										begin
+    304             1                        625     											 $display("Deposit Operation succ!\n");
+    305             1                        625     											 source_server_balance_reg=source_server_balance_reg+en_ammount_money;
+    306             1                        625     											 $display("New Balance: %d\n", source_server_balance_reg);
+    307             1                        625     											 account_balance=source_server_balance_reg;
+    308             1                        625     											next_state = anything_else;
+    309                                              											end
+    310                                              									else
+    311                                              										begin
+    312                                              											if(en_ammount_money==0)
+    313                                              											begin
+    314             1                         19     													$display("Enter Money Value!\n");										
+    315             1                         19     												   next_state = deposit;
+    316                                              											end
+    317                                              											else begin
+    318             1                        601     											$display("Enter value less than 5K!\n");
+    319             1                        601     											next_state = option_select;
+    320                                              											end
+    321                                              										end
+    322                                              							     end
+    323                                              								else begin
+    324             1                       7942     									next_state=deposit;
+    325                                              									end
+    326                                              								end
+    327                                              					             else
+    328             1                        238     					             next_state = idle;		
+    329                                              			   end 
+    330                                              		anything_else: begin
+    331             1                      26538     		$display("More Transaction ?  !\n");
+    332                                              		 if(counter <5 )begin
+    333                                              								if(mt)//More transaction
+    334                                              									begin
+    335             1                       3182     									next_state = option_select;
+    336                                              									end
+    337                                              								else
+    338                                              									begin
+    339             1                      19426     									next_state =  anything_else;
+    340                                              									end
+    341                                              				end
+    342                                              								else
+    343                                              									begin
+    344             1                       3930     									next_state =  exit;
+    345                                              									end
+    346                                              							end
+    347                                              		exit:begin				
+    348             1                       5378                         $display("Exited!\n");
+    349             1                       5378                          next_state =  idle;					
+    350                                              					  end
+    351                                              	/*********************************************************************/				  
+    352                                              		new_pass:begin		
+    353             1                       9438     				$display("Enter New Password !\n");
+    354                                                              if(counter<10)begin
+    355                                              					if (enter)begin
+    356             1                       1189     							$display("New Password operation!\n");
+    357             1                       1189     							source_server_pass_reg = new_password;
+    358             1                       1189     							next_state = anything_else;	
+    359                                              							end
+    360                                                                 else	begin	
+    361             1                       7971                          next_state = new_pass;					
+    362                                              					  end	
+    363                                              				end
+    364                                              				   else begin
+    365             1                        278     				    next_state=idle;end
+    366                                              				end
+    367                                              	/*********************************************************************/					  
+    368                                              		transfer:begin	
+    369             1                       7390       $display("Transfer Operation!\n");		
+    370                                              if(counter<5)		
+    371                                              begin
+    372                                              			if(enter)begin
+    373                                              					if(destination_exists)//Destination card number exist
+    374                                              							   begin
+    375             1                       1127     									destination_server_balance_reg = destination_server_balance;
+    376             1                       1127     									destination_server_pass_reg = destination_server_pass;		
+    377                                              										   if((en_ammount_money <= source_server_balance_reg)&&(en_ammount_money!=0))
+    378                                              										   begin
+    379             1                        410     												   $display("Transfer Operation succ!\n");	
+    380             1                        410     													source_server_balance_reg = source_server_balance_reg - en_ammount_money;
+    381             1                        410     													destination_server_balance_reg = destination_server_balance_reg + en_ammount_money;
+    382             1                        410     													$display("Source Balance: %d\n", source_server_balance_reg);
+    383             1                        410     													$display("Destination Balance: %d\n", destination_server_balance_reg);
+    384             1                        410     													account_balance=source_server_balance_reg;
+    385             1                        410     												next_state = anything_else;
+    386                                              											end
+    387                                              											else
+    388                                              											begin
+    389                                              												if(en_ammount_money==0) 
+    390                                              												begin									
+    391             1                         26     														$display("Enter Money Valu!\n");												
+    392             1                         26     														  next_state = transfer;
+    393                                              												end 
+    394                                              												else
+    395                                              												begin											
+    396             1                        691     													$display("Insuffucient balance!\n");
+    397             1                        691     													next_state = option_select;
+    398                                              												end
+    399                                              											end
+    400                                              							   end 
+    401                                              							   else begin
+    402             1                        171     							   $display("In Correct Destination account !\n");
+    403             1                        171     								destination_server_balance_reg = 0;
+    404             1                        171     								destination_server_pass_reg = 0;	
+    405             1                        171     								next_state = transfer; 
+    406                                              							   end
+    407                                              						end
+    408                                              							else begin
+    409             1                       5163     							next_state=transfer;
+    410                                              								end
+    411                                              						  end
+    412                                              							else
+    413             1                        929     							next_state = idle;						  
+    414                                              				 end					  
+    415                                              endcase
+    416                                              end
+    417                                              
+    418             1                      56594     always @(*)
+    419                                               begin
+    420                                              
+    421                                              		
+    422             1                      56594     		y0=0;
+    423             1                      56594     		y1=0;
+    424             1                      56594     		y5=0;
+    425             1                      56594     		y11=0;
+    426             1                      56594     		y10=0;
+    427             1                      56594     		y7=0;
+    428             1                      56594     		y3=0;
+    429             1                      56594     		y2=0;
+    430             1                      56594     		y4=0;
+    431             1                      56594     		y6=0;
+    432             1                      56594     		y8=0;
+    433             1                      56594     		y12=0;
+    434                                              
+    435                                                case(current_state)
+    436                                                	idle     : begin
+    437             1                       8983     				y0=1;
+    438                                                          end
+    439                                                	balance_check     : begin
+    440             1                       1623     				y1=1;
+    441                                                          end
+    442                                              
+    443                                              	exit     : begin
+    444             1                       3395                     y5=1;
+    445                                                          end	
+    446                                              	anything_else     : begin
+    447             1                       4119     				y11=1;
+    448                                                          end	
+    449                                              	option_select     : begin
+    450             1                       8798     				y10=1;
+    451                                                          end	
+    452                                              	lang_used     : begin
+    453             1                       8983     				y7=1;
+    454                                                          end	
+    455                                              	scan_card :begin
+    456             1                       8983     				y8=1;
+    457                                              			end
+    458                                              	
+    459                                              	new_pass :begin
+    460             1                       1328     				y12=1;
+    461                                              			  end			
+    462                                              	deposit     : begin
+    463             1                       1347     				y3=1;
+    464                                                          end
+    465                                              	withdraw    : begin
+    466             1                       1246     				y2=1;				
+    467                                                          end
+    468                                              	transfer    : begin
+    469                                              
+    470             1                       1292     				y4=1;				
+    471                                                          end
+    472                                              	enter_pass    : begin
+    473             1                       6497     				y6=1;
+    474                                                          end
+    475                                              
+    476                                               endcase
+    477                                              end
+    478                                              
+    479                                              
+    480                                              sequence idle_pass;
+    481                                              ((current_state==idle)&&(ic));
+    482                                              endsequence
+    483                                              
+    484                                              property card_valid;
+    485                                              @(posedge clk) idle_pass |=> (current_state==scan_card);
+    486                                              endproperty
+    487                                              
+    488                                              a_card_valid:assert property(card_valid);
+    489                                              c_card_valid:cover property(card_valid);
+    490                                              
+    491                                              property idle_f;
+    492                                              @(posedge clk) ((current_state == idle) && (!(ic)) |=> (current_state==idle)); 
+    493                                              endproperty
+    494                                              
+    495                                              a_idle_f:assert property(idle_f);
+    496                                              c_idle_f:cover property(idle_f);
+    497                                              
+    498                                              sequence scan_card_op;
+    499                                              (current_state==scan_card) && (source_exists);
+    500                                              endsequence
+    501                                              
+    502                                              property scan_card_p;
+    503                                              @(posedge clk) idle_pass |=> scan_card_op |=>(current_state==lang_used);
+    504                                              endproperty
+    505                                              
+    506                                              a_scan_card_p:assert property(scan_card_p);
+    507                                              c_scan_card_p:cover property(scan_card_p);
+    508                                              
+    509                                              property scan_card_f;
+    510                                              @(posedge clk) (current_state==scan_card) |-> (source_exists==0)[*5] ##1 (current_state==idle);
+    511                                              endproperty
+    512                                              
+    513                                              sequence lang_pass;
+    514                                              (current_state == lang_used)[*1:5] ##0 (keyboard != 0);
+    515                                              endsequence
+    516                                              
+    517                                              property lang_P;
+    518                                              @(posedge clk) (idle_pass ##1 scan_card_op ##1 lang_pass) |=> (current_state==enter_pass);
+    519                                              endproperty
+    520                                              
+    521                                              a_lang_p: assert property(lang_P);
+    522                                              
+    523                                              sequence password_pass;
+    524                                              (current_state == enter_pass)[*1:5] ##0 enter ##0 (en_password == source_server_pass_reg);
+    525                                              endsequence
+    526                                              
+    527                                              property user_valid;
+    528                                              @(posedge clk) (idle_pass ##1 scan_card_op ##1 lang_pass ##1 password_pass) |=> (current_state==option_select);
+    529                                              endproperty
+    530                                              
+    531                                              a_user_valid:assert property(user_valid);
+    532                                              c_user_valid:cover property(user_valid);
+    533                                              
+    534                                              sequence withdraw_op;
+    535                                              (current_state==withdraw)[*1:10] ##0 (enter ##0 ((en_ammount_money <= source_server_balance_reg) ##0 (en_ammount_money!=0)));   
+    536                                              endsequence
+    537                                              
+    538                                              property withdraw_pass;
+    539                                              @(posedge clk) ((current_state==option_select)[*1:5] ##0 (option=='b10) ##1 withdraw_op) |=> (current_state==anything_else);
+    540                                              endproperty
+    541                                              
+    542                                              a_withdraw_pass:assert property(withdraw_pass);
+    543                                              c_withdraw_pass:cover property(withdraw_pass);
+    544                                              
+    545                                              sequence balance_op;
+    546                                              (current_state==balance_check) ;
+    547                                              endsequence
+    548                                              
+    549                                              property bal_check_p;
+    550                                              @(posedge clk) (current_state==option_select)[*1:5] ##0 (option=='b1) ##1 balance_op[*6]  |=> (current_state==anything_else);
+    551                                              endproperty
+    552                                              
+    553                                              a_bal_check_p:assert property(bal_check_p);
+    554                                              c_bal_check_p:cover property(bal_check_p);
+    555                                              
+    556                                              
+    557                                              sequence deposit_op;
+    558                                              (current_state==deposit)[*1:10] ##0 (enter ##0 ((en_ammount_money <= deposit_max_val) && (en_ammount_money!=0))); 
+    559                                              endsequence
+    560                                              
+    561                                              property deposit_pass;
+    562                                              @(posedge clk) (current_state==option_select)[*1:5] ##0 (option=='b11) ##1 deposit_op |=> (current_state==anything_else);
+    563                                              endproperty
+    564                                              
+    565                                              a_deposit_pass:assert property(deposit_pass);
+    566                                              c_deposit_pass:cover property(deposit_pass);
+    567                                              
+    568                                              sequence transfer_op;
+    569                                              (current_state==transfer)[*1:5] ##0 enter ##0 destination_exists ##0 ((en_ammount_money <= source_server_balance_reg) ##0 (en_ammount_money!=0));
+    570                                              endsequence
+    571                                              
+    572                                              property transfer_pass;
+    573                                              @(posedge clk) ((current_state==option_select)[*1:5] ##0 (option=='b100) ##1 transfer_op) |=> (current_state==anything_else);
+    574                                              endproperty
+    575                                              
+    576                                              a_transfer_pass:assert property(transfer_pass);
+    577                                              c_transfer_pass:cover property(transfer_pass);
+    578                                              
+    579                                              
+    580                                              sequence new_pass_op;
+    581                                              (current_state==new_pass)[*1:10] ##0 enter;
+    582                                              endsequence
+    583                                              
+    584                                              property new_pass_p;
+    585                                              @(posedge clk) ((current_state==option_select)[*1:5] ##0 (option=='b110) ##1 new_pass_op) |=> (current_state==anything_else);
+    586                                              endproperty
+    587                                              
+    588                                              a_new_pass_p:assert property(new_pass_p);
+    589                                              c_new_pass_p:cover property(new_pass_p);
+    590                                              
+    591                                              
+    592                                              sequence anything_else_op;
+    593                                              (current_state==anything_else)[*1:5] ##0 (mt);
+    594                                              endsequence
+    595                                              
+    596                                              property anything_else_p;
+    597                                              @(posedge clk) (withdraw_op or balance_op or deposit_op or transfer_op or new_pass_op) |=> anything_else_op |=> (current_state==option_select);  
+    598                                              //@(posedge clk) (anything_else_op) |=> (current_state==option_select);
+    599                                              endproperty
+    600                                              
+    601                                              a_anything_else_p:assert property(anything_else_p);
+    602                                              c_anything_else_p:cover property(anything_else_p);
+    603                                              
+    604                                              property anything_else_f;
+    605                                              @(posedge clk) ((current_state==anything_else) && (!mt)[*5]) |=> (current_state==exit) ;
+    606                                              endproperty
+    607                                              
+    608                                              property exit_pass;
+    609                                              @(posedge clk) (current_state==option_select) ##[0:4] (option=='b101) ##1 (current_state == exit) |=> (current_state == idle);
+    610                                              endproperty
+    611                                              		
+    612                                              a_exit:assert property (exit_pass);
+    613                                              c_exit:cover property (exit_pass);
+    614                                              
+    615                                              endmodule
+    616                                              
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                        94        93         1     98.93
+
+================================Branch Details================================
+
+Branch Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv --
+
+------------------------------------IF Branch------------------------------------
+    86                                     80843     Count coming in to IF
+    86              1                          2     	if(!rst)
+    91              1                      80841     	else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    100                                   148805     Count coming in to IF
+    100             1                          2     	if(!rst)
+    105             1                      92210     	if(current_state==next_state)
+    107             1                      56593     	else
+Branch totals: 3 hits of 3 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    115                                   225627     Count coming in to CASE
+    116             1                      39318     		idle:begin
+    129             1                      19791     	scan_card:begin
+    151             1                      35825     	lang_used:   begin
+    163             1                      27048     		enter_pass: begin
+    197             1                      27110     		option_select:begin
+    243             1                       8626     		withdraw: begin
+    284             1                       9738     		balance_check:begin
+    298             1                       9425     		deposit: begin
+    330             1                      26538     		anything_else: begin
+    347             1                       5378     		exit:begin				
+    352             1                       9438     		new_pass:begin		
+    368             1                       7390     		transfer:begin	
+                                               2     All False Count
+Branch totals: 13 hits of 13 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    118                                    39318     Count coming in to IF
+    118             1                      17675     					if(ic)//insert  card
+    123             1                      21643     					else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    131                                    19791     Count coming in to IF
+    131             1                      17411     				if(source_exists==1)//card scan
+    140             1                       2380     				else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    153                                    35825     Count coming in to IF
+    153             1                      32276     					  if(counter <5 )begin
+    158             1                       3549     					  end else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    154                                    32276     Count coming in to IF
+    154             1                       7186     							   if(keyboard != 0)				  
+    156             1                      25090     								else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    165                                    27048     Count coming in to IF
+    165             1                      24720     		    if(counter <5 )begin
+    193             1                       2328     							  else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    166                                    24720     Count coming in to IF
+    166             1                       9763     				if(enter) begin
+    189             1                      14957     			else	begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    167                                     9763     Count coming in to IF
+    167             1                       5200     							if(en_password == source_server_pass_reg)
+    173             1                       4563     							else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    175                                     4563     Count coming in to IF
+    175             1                       4332     									if ((wrong_tries != trials) )
+    181             1                        231     									else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    199                                    27110     Count coming in to IF
+    199             1                      15962     					if(option==0)
+    207             1                      11148     					end else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    201                                    15962     Count coming in to IF
+    201             1                      14762     						if(counter<5) begin
+    204             1                       1200     						end else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    210                                    11148     Count coming in to IF
+    210             1                       1246     							if(option == 'b10)
+    214             1                       2145     							else if(option == 'b01)
+    218             1                       1347     							else if(option == 'b11)
+    222             1                       1292     							else if(option == 'b100)
+    226             1                       1328     							else if(option == 'b110)
+    230             1                       1360     							else if(option == 'b101)
+    235             1                       2430     							else //comment : if option selected wrong remain at Menu panel.
+Branch totals: 7 hits of 7 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    248                                     8626     Count coming in to IF
+    248             1                       8372     		    if(counter <10 )begin
+    279             1                        254     			 else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    249                                     8372     Count coming in to IF
+    249             1                       1150     						if(enter) begin
+    275             1                       7222     							else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    250                                     1150     Count coming in to IF
+    250             1                        530     								if((en_ammount_money <= source_server_balance_reg)&&(en_ammount_money!=0)) //check ammount entered is less that blance in account
+    258             1                        620     								else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    260                                      620     Count coming in to IF
+    260             1                         34     										if(en_ammount_money==0) 
+    265             1                        586     										else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    287                                     9738     Count coming in to IF
+    287             1                       8115     						 if(counter<5)
+    292             1                       1623     						  else 
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    300                                     9425     Count coming in to IF
+    300             1                       9187     		         if(counter <10 )begin		
+    327             1                        238     					             else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    301                                     9187     Count coming in to IF
+    301             1                       1245     						if(enter) begin				 
+    323             1                       7942     								else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    302                                     1245     Count coming in to IF
+    302             1                        625     								if((en_ammount_money <= deposit_max_val)&& (en_ammount_money!=0)) 
+    310             1                        620     									else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    312                                      620     Count coming in to IF
+    312             1                         19     											if(en_ammount_money==0)
+    317             1                        601     											else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    332                                    26538     Count coming in to IF
+    332             1                      22608     		 if(counter <5 )begin
+    342             1                       3930     								else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    333                                    22608     Count coming in to IF
+    333             1                       3182     								if(mt)//More transaction
+    337             1                      19426     								else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    354                                     9438     Count coming in to IF
+    354             1                       9160                     if(counter<10)begin
+    364             1                        278     				   else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    355                                     9160     Count coming in to IF
+    355             1                       1189     					if (enter)begin
+    360             1                       7971                        else	begin	
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    370                                     7390     Count coming in to IF
+    370             1                       6461     if(counter<5)		
+    412             1                        929     							else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    372                                     6461     Count coming in to IF
+    372             1                       1298     			if(enter)begin
+    408             1                       5163     							else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    373                                     1298     Count coming in to IF
+    373             1                       1127     					if(destination_exists)//Destination card number exist
+    401             1                        171     							   else begin
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    377                                     1127     Count coming in to IF
+    377             1                        410     										   if((en_ammount_money <= source_server_balance_reg)&&(en_ammount_money!=0))
+    387             1                        717     											else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------IF Branch------------------------------------
+    389                                      717     Count coming in to IF
+    389             1                         26     												if(en_ammount_money==0) 
+    394             1                        691     												else
+Branch totals: 2 hits of 2 branches = 100.00%
+
+------------------------------------CASE Branch------------------------------------
+    435                                    56594     Count coming in to CASE
+    436             1                       8983       	idle     : begin
+    439             1                       1623       	balance_check     : begin
+    443             1                       3395     	exit     : begin
+    446             1                       4119     	anything_else     : begin
+    449             1                       8798     	option_select     : begin
+    452             1                       8983     	lang_used     : begin
+    455             1                       8983     	scan_card :begin
+    459             1                       1328     	new_pass :begin
+    462             1                       1347     	deposit     : begin
+    465             1                       1246     	withdraw    : begin
+    468             1                       1292     	transfer    : begin
+    472             1                       6497     	enter_pass    : begin
+                                         ***0***     All False Count
+Branch totals: 12 hits of 13 branches = 92.30%
+
+
+Condition Coverage:
+    Enabled Coverage            Active   Covered    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    FEC Condition Terms             30        30         0    100.00
+
+================================Condition Details================================
+
+Condition Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv --
+
+----------------Focused Condition View-------------------
+Line       105 Item    1  (current_state == next_state)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       131 Item    1  (source_exists == 1)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       153 Item    1  (counter < 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       154 Item    1  (keyboard != 0)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       165 Item    1  (counter < 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       167 Item    1  (en_password == source_server_pass_reg)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       175 Item    1  (wrong_tries != trials)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       199 Item    1  (option == 0)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       201 Item    1  (counter < 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       210 Item    1  (option == 2)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       214 Item    1  (option == 1)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       218 Item    1  (option == 3)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       222 Item    1  (option == 4)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       226 Item    1  (option == 6)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       230 Item    1  (option == 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       248 Item    1  (counter < 10)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       250 Item    1  ((en_ammount_money <= source_server_balance_reg) && (en_ammount_money != 0))
+Condition totals: 2 of 2 input terms covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       260 Item    1  (en_ammount_money == 0)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       287 Item    1  (counter < 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       300 Item    1  (counter < 10)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       302 Item    1  ((en_ammount_money <= deposit_max_val) && (en_ammount_money != 0))
+Condition totals: 2 of 2 input terms covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       312 Item    1  (en_ammount_money == 0)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       332 Item    1  (counter < 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       354 Item    1  (counter < 10)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       370 Item    1  (counter < 5)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       377 Item    1  ((en_ammount_money <= source_server_balance_reg) && (en_ammount_money != 0))
+Condition totals: 2 of 2 input terms covered = 100.00%
+
+----------------Focused Condition View-------------------
+Line       389 Item    1  (en_ammount_money == 0)
+Condition totals: 1 of 1 input term covered = 100.00%
+
+
+FSM Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    FSMs                                                       95.16
+        States                      12        12         0    100.00
+        Transitions                 31        28         3     90.32
+
+================================FSM Details================================
+
+FSM Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv --
+
+FSM_ID: current_state
+    Current State Object : current_state
+    ----------------------
+    State Value MapInfo :
+    ---------------------
+Line          State Name               Value
+----          ----------               -----
+ 116                idle                   0
+ 129           scan_card                   8
+ 151           lang_used                   7
+ 163          enter_pass                   9
+ 197       option_select                  10
+ 347                exit                   5
+ 352            new_pass                   6
+ 368            transfer                   4
+ 298             deposit                   3
+ 284       balance_check                   1
+ 243            withdraw                   2
+ 330       anything_else                  11
+    Covered States :
+    ----------------
+                   State           Hit_count
+                   -----           ---------
+                    idle               13052
+               scan_card                9538
+               lang_used               14388
+              enter_pass                9206
+           option_select               11886
+                    exit                3395
+                new_pass                2549
+                transfer                2492
+                 deposit                2564
+           balance_check                3246
+                withdraw                2373
+           anything_else                6154
+    Covered Transitions :
+    ---------------------
+Line            Trans_ID           Hit_count          Transition          
+----            --------           ---------          ----------          
+ 120                   0                8983          idle -> scan_card   
+ 138                   1                8983          scan_card -> lang_used
+ 159                   3                2486          lang_used -> idle   
+ 155                   4                6497          lang_used -> enter_pass
+ 194                   5                1385          enter_pass -> idle  
+ 169                   6                5112          enter_pass -> option_select
+ 232                   7                1360          option_select -> exit
+ 228                   8                1328          option_select -> new_pass
+ 224                   9                1292          option_select -> transfer
+ 220                  10                1347          option_select -> deposit
+ 216                  11                1623          option_select -> balance_check
+ 212                  12                1246          option_select -> withdraw
+ 205                  13                 602          option_select -> idle
+ 349                  14                3394          exit -> idle        
+ 365                  15                 139          new_pass -> idle    
+ 358                  16                1189          new_pass -> anything_else
+ 413                  17                 725          transfer -> idle    
+ 397                  18                 415          transfer -> option_select
+ 385                  19                 152          transfer -> anything_else
+ 328                  20                 121          deposit -> idle     
+ 319                  21                 601          deposit -> option_select
+ 308                  22                 625          deposit -> anything_else
+ 294                  23                1623          balance_check -> anything_else
+ 280                  25                 130          withdraw -> idle    
+ 268                  26                 586          withdraw -> option_select
+ 256                  27                 530          withdraw -> anything_else
+ 344                  28                2035          anything_else -> exit
+ 335                  29                2084          anything_else -> option_select
+    Uncovered Transitions :
+    -----------------------
+Line            Trans_ID          Transition          
+----            --------          ----------          
+  88                   2          scan_card -> idle   
+  88                  24          balance_check -> idle
+  88                  30          anything_else -> idle
+
+
+    Summary                     Active      Hits    Misses % Covered
+    -------                     ------      ----    ------ ---------
+        States                      12        12         0    100.00
+        Transitions                 31        28         3     90.32
+
+=================================================================================
+=== File: C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_card_scan.v
+=================================================================================
+Statement Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Stmts                           57        57         0    100.00
+
+================================Statement Details================================
+
+Statement Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_card_scan.v --
+
+    1                                                /***************************************************************************************************************/
+    2                                                /*
+    3                                                 Author: Omar Ayman Abdel-Motaal
+    4                                                
+    5                                                 Design Name:  Card Scan 
+    6                                                 Module Name:  u_card_scan.v 
+    7                                                 Project Name: ATM
+    8                                                 Describtion:  This Module aim to emulate server data base
+    9                                                /****************************************************************************************************************/
+    10                                               module u_card_scan
+    11                                                   #(parameter CNS = 64, CIS = 4,DBD=16 ,Pass_width=16,balance_width=14)//CNS: Credit number size  ,CIS: card_index , DBD:Data base depth
+    12                                               	(
+    13                                               	input  wire   [CNS-1:0]            credit_number,
+    14                                               	
+    15                                                   output wire   [CIS-1:0]            card_index,
+    16                                                   output wire   [Pass_width-1:0]     card_pass,
+    17                                               	output wire   [balance_width-1:0]  card_balance,
+    18                                                   output reg                         card_found_flag	
+    19                                                   );
+    20                                               
+    21                                                   integer i;
+    22                                                   reg [CNS-1:0] credit_number_bank [0:DBD-1];
+    23                                               	reg [Pass_width-1:0] credit_pass [0:DBD-1];
+    24                                               	reg [balance_width-1:0] credit_balance [0:DBD-1];
+    25                                               			
+    26                                               /************************ Data base virtual **********************/
+    27                                               /*****************************************************************/
+    28                                                      initial begin
+    29              1                          2     	    $display("Welcome to the ATM System");
+    30              1                          2             credit_number_bank[0] = 'd100;
+    31              1                          2             credit_number_bank[1] = 'd200;
+    32              1                          2             credit_number_bank[2] = 'd300;
+    33              1                          2             credit_number_bank[3] = 'd400;
+    34              1                          2             credit_number_bank[4] = 'd500;
+    35              1                          2             credit_number_bank[5] = 'd600;
+    36              1                          2             credit_number_bank[6] = 'd700;
+    37              1                          2             credit_number_bank[7] = 'd800;
+    38              1                          2             credit_number_bank[8] = 'd900;
+    39              1                          2             credit_number_bank[9] = 'd1000;
+    40              1                          2             credit_number_bank[10] = 'd1003;
+    41              1                          2             credit_number_bank[11] = 'd1006;
+    42              1                          2             credit_number_bank[12] = 'd1009;
+    43              1                          2             credit_number_bank[13] = 'd1012;
+    44              1                          2             credit_number_bank[14] = 'd1015;
+    45              1                          2     		credit_number_bank[15] = 'd1018;
+    46                                                   end
+    47                                               	//Password
+    48                                                   initial begin
+    49              1                          2             credit_pass[0] = 'd0;
+    50              1                          2             credit_pass[1] = 'd1;
+    51              1                          2             credit_pass[2] = 'd2;
+    52              1                          2             credit_pass[3] = 'd3;
+    53              1                          2             credit_pass[4] = 'd4;
+    54              1                          2             credit_pass[5] = 'd5;
+    55              1                          2             credit_pass[6] = 'd6;
+    56              1                          2             credit_pass[7] = 'd7;
+    57              1                          2             credit_pass[8] = 'd8;
+    58              1                          2             credit_pass[9] = 'd9;
+    59              1                          2             credit_pass[10] = 'd10;
+    60              1                          2             credit_pass[11] = 'd11;
+    61              1                          2             credit_pass[12] = 'd12;
+    62              1                          2             credit_pass[13] = 'd13;
+    63              1                          2             credit_pass[14] = 'd14;
+    64              1                          2     		credit_pass[15] = 'd15;
+    65                                                   end
+    66                                               		//Balance
+    67                                                   initial begin
+    68              1                          2             credit_balance[0] = 'd1500;
+    69              1                          2             credit_balance[1] = 'd2000;
+    70              1                          2             credit_balance[2] = 'd2500;
+    71              1                          2             credit_balance[3] = 'd3000;
+    72              1                          2             credit_balance[4] = 'd3500;
+    73              1                          2             credit_balance[5] = 'd4000;
+    74              1                          2             credit_balance[6] = 'd4500;
+    75              1                          2             credit_balance[7] = 'd5000;
+    76              1                          2             credit_balance[8] = 'd5500;
+    77              1                          2             credit_balance[9] = 'd6000;
+    78              1                          2             credit_balance[10] = 'd6500;
+    79              1                          2             credit_balance[11] = 'd7000;
+    80              1                          2             credit_balance[12] = 'd7500;
+    81              1                          2             credit_balance[13] = 'd8000;
+    82              1                          2             credit_balance[14] = 'd8500;
+    83              1                          2     		credit_balance[15] = 'd9000;
+    84                                                   end
+    85                                               /******************** Search for credit_number @ Data base ******************/	
+    86                                                   reg [CIS-1:0] index_temp;
+    87                                               	
+    88              1                      29412         always @(credit_number) begin// looking for index when credit_number changes
+    89              1                      29412             card_found_flag <= 1'b0;
+    90              1                      29412             for (i = 0; i < DBD; i = i + 1) begin
+    90              2                     470592     
+    91                                                           if (credit_number == credit_number_bank[i]) begin
+    92              1                      27686                     index_temp <= i;
+    93              1                      27686                     card_found_flag <= 1'b1;
+    94                                                           end
+    95                                                       end
+    96                                                   end
+    97                                               /*****************************************************************/	
+    98                                                assign   card_index = index_temp;
+    99              1                      27577      assign   card_pass= credit_pass[card_index];
+    100             1                      27577      assign   card_balance= credit_balance[card_index];		
+    101                                              		
+    102                                              endmodule
+
+Branch Coverage:
+    Enabled Coverage            Active      Hits    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    Branches                         2         2         0    100.00
+
+================================Branch Details================================
+
+Branch Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_card_scan.v --
+
+------------------------------------IF Branch------------------------------------
+    91                                    470592     Count coming in to IF
+    91              1                      27686                 if (credit_number == credit_number_bank[i]) begin
+                                          442906     All False Count
+Branch totals: 2 hits of 2 branches = 100.00%
+
+
+Condition Coverage:
+    Enabled Coverage            Active   Covered    Misses % Covered
+    ----------------            ------      ----    ------ ---------
+    FEC Condition Terms              1         1         0    100.00
+
+================================Condition Details================================
+
+Condition Coverage for file C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_card_scan.v --
+
+----------------Focused Condition View-------------------
+Line       91 Item    1  (credit_number == credit_number_bank[i])
+Condition totals: 1 of 1 input term covered = 100.00%
+
+
+
+COVERGROUP COVERAGE:
+-----------------------------------------------------------------------------------------------
+Covergroup                                             Metric       Goal    Status               
+                                                                                              
+-----------------------------------------------------------------------------------------------
+ TYPE /ATM_tb/user_data                               100.00%        100    Covered              
+    covered/total bins:                                   184        184                      
+    missing/total bins:                                     0        184                      
+    % Hit:                                            100.00%        100                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=Coverage model for all the users data
+    type_option.strobe=0
+    type_option.merge_instances=auto(0)
+    Coverpoint user_data::user_balance                100.00%        100    Covered              
+        covered/total bins:                                16         16                      
+        missing/total bins:                                 0         16                      
+        % Hit:                                        100.00%        100                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+    Coverpoint user_data::user_pass                   100.00%        100    Covered              
+        covered/total bins:                                16         16                      
+        missing/total bins:                                 0         16                      
+        % Hit:                                        100.00%        100                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+    Coverpoint user_data::user_id                     100.00%        100    Covered              
+        covered/total bins:                                16         16                      
+        missing/total bins:                                 0         16                      
+        % Hit:                                        100.00%        100                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+    Coverpoint user_data::options                     100.00%        100    Covered              
+        covered/total bins:                                 8          8                      
+        missing/total bins:                                 0          8                      
+        % Hit:                                        100.00%        100                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+    Cross user_data::user_options                     100.00%        100    Covered              
+        covered/total bins:                               128        128                      
+        missing/total bins:                                 0        128                      
+        % Hit:                                        100.00%        100                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+ Covergroup instance \/ATM_tb/User_Data_inst1         100.00%        100    Covered              
+    covered/total bins:                                   184        184                      
+    missing/total bins:                                     0        184                      
+    % Hit:                                            100.00%        100                      
+    option.name=\/ATM_tb/User_Data_inst1 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=0
+    option.get_inst_coverage=0
+    Coverpoint user_balance                           100.00%        100    Covered              
+        covered/total bins:                                16         16                      
+        missing/total bins:                                 0         16                      
+        % Hit:                                        100.00%        100                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin balances[1500]                               9467          1    Covered              
+        bin balances[2000]                               9917          1    Covered              
+        bin balances[2500]                               9880          1    Covered              
+        bin balances[3000]                               9575          1    Covered              
+        bin balances[3500]                              10102          1    Covered              
+        bin balances[4000]                               9424          1    Covered              
+        bin balances[4500]                               9644          1    Covered              
+        bin balances[5000]                               8807          1    Covered              
+        bin balances[5500]                               8703          1    Covered              
+        bin balances[6000]                               8789          1    Covered              
+        bin balances[6500]                               8933          1    Covered              
+        bin balances[7000]                               9143          1    Covered              
+        bin balances[7500]                               9853          1    Covered              
+        bin balances[8000]                               8856          1    Covered              
+        bin balances[8500]                               8942          1    Covered              
+        bin balances[9000]                               8768          1    Covered              
+    Coverpoint user_pass                              100.00%        100    Covered              
+        covered/total bins:                                16         16                      
+        missing/total bins:                                 0         16                      
+        % Hit:                                        100.00%        100                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin passwords[0]                                 9467          1    Covered              
+        bin passwords[1]                                 9917          1    Covered              
+        bin passwords[2]                                 9880          1    Covered              
+        bin passwords[3]                                 9575          1    Covered              
+        bin passwords[4]                                10102          1    Covered              
+        bin passwords[5]                                 9424          1    Covered              
+        bin passwords[6]                                 9644          1    Covered              
+        bin passwords[7]                                 8807          1    Covered              
+        bin passwords[8]                                 8703          1    Covered              
+        bin passwords[9]                                 8789          1    Covered              
+        bin passwords[10]                                8933          1    Covered              
+        bin passwords[11]                                9143          1    Covered              
+        bin passwords[12]                                9853          1    Covered              
+        bin passwords[13]                                8856          1    Covered              
+        bin passwords[14]                                8942          1    Covered              
+        bin passwords[15]                                8768          1    Covered              
+    Coverpoint user_id                                100.00%        100    Covered              
+        covered/total bins:                                16         16                      
+        missing/total bins:                                 0         16                      
+        % Hit:                                        100.00%        100                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin IDs[100]                                     9335          1    Covered              
+        bin IDs[200]                                     9767          1    Covered              
+        bin IDs[300]                                     9729          1    Covered              
+        bin IDs[400]                                     9426          1    Covered              
+        bin IDs[500]                                     9940          1    Covered              
+        bin IDs[600]                                     9249          1    Covered              
+        bin IDs[700]                                     9490          1    Covered              
+        bin IDs[800]                                     8653          1    Covered              
+        bin IDs[900]                                     8570          1    Covered              
+        bin IDs[1000]                                    8657          1    Covered              
+        bin IDs[1003]                                    8787          1    Covered              
+        bin IDs[1006]                                    9025          1    Covered              
+        bin IDs[1009]                                    9705          1    Covered              
+        bin IDs[1012]                                    8726          1    Covered              
+        bin IDs[1015]                                    8788          1    Covered              
+        bin IDs[1018]                                    8609          1    Covered              
+    Coverpoint options                                100.00%        100    Covered              
+        covered/total bins:                                 8          8                      
+        missing/total bins:                                 0          8                      
+        % Hit:                                        100.00%        100                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin options[0]                                  91553          1    Covered              
+        bin options[1]                                  13980          1    Covered              
+        bin options[2]                                   7346          1    Covered              
+        bin options[3]                                   8059          1    Covered              
+        bin options[4]                                   7553          1    Covered              
+        bin options[5]                                  10891          1    Covered              
+        bin options[6]                                   8110          1    Covered              
+        bin options[7]                                   1312          1    Covered              
+    Cross user_options                                100.00%        100    Covered              
+        covered/total bins:                               128        128                      
+        missing/total bins:                                 0        128                      
+        % Hit:                                        100.00%        100                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.cross_num_print_missing=0
+        bin <IDs[100],options[0]>                        5751          1    Covered              
+        bin <IDs[200],options[0]>                        5971          1    Covered              
+        bin <IDs[300],options[0]>                        5842          1    Covered              
+        bin <IDs[400],options[0]>                        5531          1    Covered              
+        bin <IDs[500],options[0]>                        5802          1    Covered              
+        bin <IDs[600],options[0]>                        5750          1    Covered              
+        bin <IDs[700],options[0]>                        5649          1    Covered              
+        bin <IDs[800],options[0]>                        5265          1    Covered              
+        bin <IDs[900],options[0]>                        5233          1    Covered              
+        bin <IDs[1000],options[0]>                       5351          1    Covered              
+        bin <IDs[1003],options[0]>                       5535          1    Covered              
+        bin <IDs[1006],options[0]>                       5388          1    Covered              
+        bin <IDs[1009],options[0]>                       5842          1    Covered              
+        bin <IDs[1012],options[0]>                       5362          1    Covered              
+        bin <IDs[1015],options[0]>                       5421          1    Covered              
+        bin <IDs[1018],options[0]>                       5512          1    Covered              
+        bin <IDs[100],options[1]>                         819          1    Covered              
+        bin <IDs[200],options[1]>                         875          1    Covered              
+        bin <IDs[300],options[1]>                        1051          1    Covered              
+        bin <IDs[400],options[1]>                         936          1    Covered              
+        bin <IDs[500],options[1]>                         997          1    Covered              
+        bin <IDs[600],options[1]>                         824          1    Covered              
+        bin <IDs[700],options[1]>                         740          1    Covered              
+        bin <IDs[800],options[1]>                         842          1    Covered              
+        bin <IDs[900],options[1]>                         855          1    Covered              
+        bin <IDs[1000],options[1]>                        801          1    Covered              
+        bin <IDs[1003],options[1]>                        788          1    Covered              
+        bin <IDs[1006],options[1]>                        930          1    Covered              
+        bin <IDs[1009],options[1]>                        999          1    Covered              
+        bin <IDs[1012],options[1]>                        888          1    Covered              
+        bin <IDs[1015],options[1]>                        845          1    Covered              
+        bin <IDs[1018],options[1]>                        790          1    Covered              
+        bin <IDs[100],options[2]>                         476          1    Covered              
+        bin <IDs[200],options[2]>                         400          1    Covered              
+        bin <IDs[300],options[2]>                         400          1    Covered              
+        bin <IDs[400],options[2]>                         516          1    Covered              
+        bin <IDs[500],options[2]>                         510          1    Covered              
+        bin <IDs[600],options[2]>                         476          1    Covered              
+        bin <IDs[700],options[2]>                         501          1    Covered              
+        bin <IDs[800],options[2]>                         448          1    Covered              
+        bin <IDs[900],options[2]>                         455          1    Covered              
+        bin <IDs[1000],options[2]>                        491          1    Covered              
+        bin <IDs[1003],options[2]>                        452          1    Covered              
+        bin <IDs[1006],options[2]>                        397          1    Covered              
+        bin <IDs[1009],options[2]>                        525          1    Covered              
+        bin <IDs[1012],options[2]>                        466          1    Covered              
+        bin <IDs[1015],options[2]>                        491          1    Covered              
+        bin <IDs[1018],options[2]>                        342          1    Covered              
+        bin <IDs[100],options[3]>                         527          1    Covered              
+        bin <IDs[200],options[3]>                         510          1    Covered              
+        bin <IDs[300],options[3]>                         473          1    Covered              
+        bin <IDs[400],options[3]>                         515          1    Covered              
+        bin <IDs[500],options[3]>                         630          1    Covered              
+        bin <IDs[600],options[3]>                         625          1    Covered              
+        bin <IDs[700],options[3]>                         571          1    Covered              
+        bin <IDs[800],options[3]>                         402          1    Covered              
+        bin <IDs[900],options[3]>                         372          1    Covered              
+        bin <IDs[1000],options[3]>                        388          1    Covered              
+        bin <IDs[1003],options[3]>                        445          1    Covered              
+        bin <IDs[1006],options[3]>                        598          1    Covered              
+        bin <IDs[1009],options[3]>                        561          1    Covered              
+        bin <IDs[1012],options[3]>                        513          1    Covered              
+        bin <IDs[1015],options[3]>                        454          1    Covered              
+        bin <IDs[1018],options[3]>                        475          1    Covered              
+        bin <IDs[100],options[4]>                         432          1    Covered              
+        bin <IDs[200],options[4]>                         657          1    Covered              
+        bin <IDs[300],options[4]>                         580          1    Covered              
+        bin <IDs[400],options[4]>                         533          1    Covered              
+        bin <IDs[500],options[4]>                         544          1    Covered              
+        bin <IDs[600],options[4]>                         428          1    Covered              
+        bin <IDs[700],options[4]>                         547          1    Covered              
+        bin <IDs[800],options[4]>                         467          1    Covered              
+        bin <IDs[900],options[4]>                         400          1    Covered              
+        bin <IDs[1000],options[4]>                        491          1    Covered              
+        bin <IDs[1003],options[4]>                        449          1    Covered              
+        bin <IDs[1006],options[4]>                        472          1    Covered              
+        bin <IDs[1009],options[4]>                        458          1    Covered              
+        bin <IDs[1012],options[4]>                        266          1    Covered              
+        bin <IDs[1015],options[4]>                        446          1    Covered              
+        bin <IDs[1018],options[4]>                        383          1    Covered              
+        bin <IDs[100],options[5]>                         641          1    Covered              
+        bin <IDs[200],options[5]>                         730          1    Covered              
+        bin <IDs[300],options[5]>                         660          1    Covered              
+        bin <IDs[400],options[5]>                         719          1    Covered              
+        bin <IDs[500],options[5]>                         725          1    Covered              
+        bin <IDs[600],options[5]>                         568          1    Covered              
+        bin <IDs[700],options[5]>                         843          1    Covered              
+        bin <IDs[800],options[5]>                         719          1    Covered              
+        bin <IDs[900],options[5]>                         774          1    Covered              
+        bin <IDs[1000],options[5]>                        640          1    Covered              
+        bin <IDs[1003],options[5]>                        621          1    Covered              
+        bin <IDs[1006],options[5]>                        678          1    Covered              
+        bin <IDs[1009],options[5]>                        683          1    Covered              
+        bin <IDs[1012],options[5]>                        601          1    Covered              
+        bin <IDs[1015],options[5]>                        656          1    Covered              
+        bin <IDs[1018],options[5]>                        633          1    Covered              
+        bin <IDs[100],options[6]>                         617          1    Covered              
+        bin <IDs[200],options[6]>                         547          1    Covered              
+        bin <IDs[300],options[6]>                         620          1    Covered              
+        bin <IDs[400],options[6]>                         600          1    Covered              
+        bin <IDs[500],options[6]>                         636          1    Covered              
+        bin <IDs[600],options[6]>                         494          1    Covered              
+        bin <IDs[700],options[6]>                         547          1    Covered              
+        bin <IDs[800],options[6]>                         437          1    Covered              
+        bin <IDs[900],options[6]>                         429          1    Covered              
+        bin <IDs[1000],options[6]>                        412          1    Covered              
+        bin <IDs[1003],options[6]>                        418          1    Covered              
+        bin <IDs[1006],options[6]>                        470          1    Covered              
+        bin <IDs[1009],options[6]>                        526          1    Covered              
+        bin <IDs[1012],options[6]>                        570          1    Covered              
+        bin <IDs[1015],options[6]>                        391          1    Covered              
+        bin <IDs[1018],options[6]>                        396          1    Covered              
+        bin <IDs[100],options[7]>                          72          1    Covered              
+        bin <IDs[200],options[7]>                          77          1    Covered              
+        bin <IDs[300],options[7]>                         103          1    Covered              
+        bin <IDs[400],options[7]>                          76          1    Covered              
+        bin <IDs[500],options[7]>                          96          1    Covered              
+        bin <IDs[600],options[7]>                          84          1    Covered              
+        bin <IDs[700],options[7]>                          92          1    Covered              
+        bin <IDs[800],options[7]>                          73          1    Covered              
+        bin <IDs[900],options[7]>                          52          1    Covered              
+        bin <IDs[1000],options[7]>                         83          1    Covered              
+        bin <IDs[1003],options[7]>                         79          1    Covered              
+        bin <IDs[1006],options[7]>                         92          1    Covered              
+        bin <IDs[1009],options[7]>                        111          1    Covered              
+        bin <IDs[1012],options[7]>                         60          1    Covered              
+        bin <IDs[1015],options[7]>                         84          1    Covered              
+        bin <IDs[1018],options[7]>                         78          1    Covered              
+ TYPE /ATM_tb/FSM_CG                                  100.00%        100    Covered              
+    covered/total bins:                                    28         28                      
+    missing/total bins:                                     0         28                      
+    % Hit:                                            100.00%        100                      
+    type_option.weight=1
+    type_option.goal=100
+    type_option.comment=Coverage Model for the fsm states and transitions
+    type_option.strobe=0
+    type_option.merge_instances=auto(0)
+    Coverpoint FSM_CG::current_state                  100.00%        100    Covered              
+        covered/total bins:                                28         28                      
+        missing/total bins:                                 0         28                      
+        % Hit:                                        100.00%        100                      
+        type_option.weight=1
+        type_option.goal=100
+        type_option.comment=
+ Covergroup instance \/ATM_tb/FSM_inst1               100.00%        100    Covered              
+    covered/total bins:                                    28         28                      
+    missing/total bins:                                     0         28                      
+    % Hit:                                            100.00%        100                      
+    option.name=\/ATM_tb/FSM_inst1 
+    option.weight=1
+    option.goal=100
+    option.comment=
+    option.at_least=1
+    option.auto_bin_max=64
+    option.cross_num_print_missing=0
+    option.detect_overlap=0
+    option.per_instance=0
+    option.get_inst_coverage=0
+    Coverpoint current_state                          100.00%        100    Covered              
+        covered/total bins:                                28         28                      
+        missing/total bins:                                 0         28                      
+        % Hit:                                        100.00%        100                      
+        option.weight=1
+        option.goal=100
+        option.comment=
+        option.at_least=1
+        option.auto_bin_max=64
+        option.detect_overlap=0
+        bin valid_states[0]                             22276          1    Covered              
+        bin valid_states[1]                              9738          1    Covered              
+        bin valid_states[2]                              7380          1    Covered              
+        bin valid_states[3]                              8078          1    Covered              
+        bin valid_states[4]                              5990          1    Covered              
+        bin valid_states[5]                              3394          1    Covered              
+        bin valid_states[6]                              8110          1    Covered              
+        bin valid_states[7]                             28731          1    Covered              
+        bin valid_states[8]                              9618          1    Covered              
+        bin valid_states[9]                             16473          1    Covered              
+        bin valid_states[10]                            14722          1    Covered              
+        bin valid_states[11]                            14294          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>2=>11] 
+                                                            8          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>3=>10] 
+                                                            4          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>3=>11] 
+                                                            5          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>3=>10] 
+                                                            4          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>6=>11] 
+                                                           11          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>4=>11] 
+                                                            4          1    Covered              
+        bin vallid_transitions[0=>8=>7=>9=>10=>4=>10] 
+                                                           10          1    Covered              
+        bin vallid_transitions[11=>10]                   2084          1    Covered              
+        bin vallid_transitions[11=>5]                    2034          1    Covered              
+        bin goto_idle[9=>0]                              1385          1    Covered              
+        bin goto_idle[7=>0]                              2486          1    Covered              
+        bin goto_idle[5=>0]                              3394          1    Covered              
+        bin goto_idle[4=>0]                               725          1    Covered              
+        bin goto_idle[3=>0]                               121          1    Covered              
+        bin goto_idle[2=>0]                               130          1    Covered              
+        bin goto_idle[0=>0]                             13293          1    Covered              
+
+TOTAL COVERGROUP COVERAGE: 100.00%  COVERGROUP TYPES: 2
+
+DIRECTIVE COVERAGE:
+---------------------------------------------------------------------------------------------
+Name                                     Design Design   Lang File(Line)      Count Status    
+                                         Unit   UnitType                                      
+---------------------------------------------------------------------------------------------
+/ATM_tb/DUT/c_card_valid                 u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(489)
+                                                                               8983 Covered   
+/ATM_tb/DUT/c_idle_f                     u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(496)
+                                                                              13293 Covered   
+/ATM_tb/DUT/c_scan_card_p                u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(507)
+                                                                               8428 Covered   
+/ATM_tb/DUT/c_user_valid                 u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(532)
+                                                                               5108 Covered   
+/ATM_tb/DUT/c_withdraw_pass              u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(543)
+                                                                                349 Covered   
+/ATM_tb/DUT/c_bal_check_p                u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(554)
+                                                                               2098 Covered   
+/ATM_tb/DUT/c_deposit_pass               u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(566)
+                                                                                858 Covered   
+/ATM_tb/DUT/c_transfer_pass              u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(577)
+                                                                                131 Covered   
+/ATM_tb/DUT/c_new_pass_p                 u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(589)
+                                                                               1608 Covered   
+/ATM_tb/DUT/c_anything_else_p            u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(602)
+                                                                               6395 Covered   
+/ATM_tb/DUT/c_exit                       u_atm_fsm Verilog  SVA  C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(613)
+                                                                               1986 Covered   
+
+TOTAL DIRECTIVE COVERAGE: 100.00%  COVERS: 11
+
+ASSERTION RESULTS:
+--------------------------------------------------------------------------------------------------------------------------------
+Name                 File(Line)                   Failure      Pass     Vacuous    Disable    Attempt     Active Peak Active ATV
+                                                  Count        Count    Count      Count      Count       Count  Count          
+--------------------------------------------------------------------------------------------------------------------------------
+/ATM_tb/DUT/a_card_valid
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(488)
+                                                        0       8983     139821          0     148804          0           1 off
+/ATM_tb/DUT/a_idle_f C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(495)
+                                                        0      13293     135511          0     148804          0           2 off
+/ATM_tb/DUT/a_scan_card_p
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(506)
+                                                        0       8428     140376          0     148804          0           1 off
+/ATM_tb/DUT/a_lang_p C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(521)
+                                                        0       6306     142498          0     148804          0           1 off
+/ATM_tb/DUT/a_user_valid
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(531)
+                                                        0       5108     143696          0     148804          0           2 off
+/ATM_tb/DUT/a_withdraw_pass
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(542)
+                                                        0        349     148455          0     148804          0           6 off
+/ATM_tb/DUT/a_bal_check_p
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(553)
+                                                        0       2098     146706          0     148804          0           5 off
+/ATM_tb/DUT/a_deposit_pass
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(565)
+                                                        0        858     147946          0     148804          0           5 off
+/ATM_tb/DUT/a_transfer_pass
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(576)
+                                                        0        131     148673          0     148804          0           5 off
+/ATM_tb/DUT/a_new_pass_p
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(588)
+                                                        0       1608     147196          0     148804          0           5 off
+/ATM_tb/DUT/a_anything_else_p
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(601)
+                                                        0       6395     142409          0     148804          0          10 off
+/ATM_tb/DUT/a_exit   C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/u_atm_fsm.sv(612)
+                                                        0       1986     146818          0     148804          0           5 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/immed__238
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(238)
+                                                        0      30000          0          0      30000          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/immed__259
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(259)
+                                                        0       8428          0          0       8428          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/#ublk#59777284#264/immed__267
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(267)
+                                                        0       5574          0          0       5574          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/#ublk#59777284#264/#ublk#59777284#276/immed__279
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(279)
+                                                        0        272          0          0        272          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/#ublk#59777284#264/#ublk#59777284#288/immed__291
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(291)
+                                                        0       9233          0          0       9233          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/#ublk#59777284#264/#ublk#59777284#307/immed__311
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(311)
+                                                        0       2593          0          0       2593          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/#ublk#59777284#264/#ublk#59777284#326/immed__331
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(331)
+                                                        0       1292          0          0       1292          0           0 off
+/ATM_tb_sv_unit/generator/body/#ublk#59777284#234/#ublk#59777284#250/#ublk#59777284#264/#ublk#59777284#345/immed__349
+                     C:/Users/Muhammad Aboseada/OneDrive/Desktop/4th year/2nd_Term/EDA/Projects/Lecture/Project_1_V4/ATM_tb.sv(349)
+                                                        0       1328          0          0       1328          0           0 off
+
+Total Coverage By File (code coverage only, filtered view): 98.52%
+
