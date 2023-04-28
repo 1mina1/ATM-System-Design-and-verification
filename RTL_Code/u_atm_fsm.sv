@@ -1,12 +1,3 @@
-/***************************************************************************************************************/
-/*
- Author: Omar Ayman Abdel-Motaal
-
- Design Name:  ATM.FSM
- Module Name:  u_atm_fsm.v 
- Project Name: ATM
- Describtion:  This Module aim to implement FSM of ATM
-/****************************************************************************************************************/
 module u_atm_fsm
     #(parameter CNS = 64, CIS = 4,DBD=16 ,Pass_width=16,balance_width=14 )
 	(
